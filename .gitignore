@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Dati grezzi: troppo pesanti per GitHub, si riscaricano dal CDC
+data/raw/*
+!data/raw/.gitkeep
