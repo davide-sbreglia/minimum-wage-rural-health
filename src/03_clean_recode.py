@@ -3,8 +3,7 @@
 BRFSS does not use empty cells for non-substantive answers; it uses numeric
 sentinel codes. This script converts those codes for the project's variables,
 following the CDC BRFSS codebooks. It does NOT drop any rows: missing values
-are marked as NaN and row-level filtering is deferred to the analysis stage,
-once we know which variables each analysis requires.
+are marked as NaN and row-level filtering is deferred to the analysis stage.
 
 Recoding (per CDC BRFSS codebooks):
   ment_health_days / phys_health_days  (valid range 1-30):
@@ -14,7 +13,10 @@ Recoding (per CDC BRFSS codebooks):
   gen_health  (valid range 1-5):
       7  -> NaN   ("Don't know / Not sure")
       9  -> NaN   ("Refused")
-  sex, geo_msa, state, year: already clean, left unchanged.
+  sex  (1 = male, 2 = female):
+      7  -> NaN   ("Don't know / Not sure")
+      9  -> NaN   ("Refused")
+  education, geo_msa, state, year: handled elsewhere or already clean.
 
 Input:  data/processed/brfss_panel.parquet
 Output: data/processed/brfss_panel_clean.parquet
@@ -31,12 +33,11 @@ OUT_PATH = PROCESSED_DIR / "brfss_panel_clean.parquet"
 
 def recode_health_days(series: pd.Series) -> pd.Series:
     """Recode a BRFSS 'days in past 30' variable (88->0, 77/99->NaN)."""
-    s = series.replace({88: 0, 77: np.nan, 99: np.nan})
-    return s
+    return series.replace({88: 0, 77: np.nan, 99: np.nan})
 
 
-def recode_gen_health(series: pd.Series) -> pd.Series:
-    """Recode BRFSS general-health (1-5 valid; 7/9 -> NaN)."""
+def recode_dk_refused(series: pd.Series) -> pd.Series:
+    """Recode BRFSS variables where 7='don't know' and 9='refused' -> NaN."""
     return series.replace({7: np.nan, 9: np.nan})
 
 
@@ -46,14 +47,14 @@ def main() -> None:
 
     df["ment_health_days"] = recode_health_days(df["ment_health_days"])
     df["phys_health_days"] = recode_health_days(df["phys_health_days"])
-    df["gen_health"] = recode_gen_health(df["gen_health"])
+    df["gen_health"] = recode_dk_refused(df["gen_health"])
+    df["sex"] = recode_dk_refused(df["sex"])
 
     df.to_parquet(OUT_PATH, index=False)
 
-    # Report how many missing values each recoded variable now has.
     print(f"Rows: {n_before:,} (unchanged; no rows dropped)\n")
     print("Missing values (NaN) after recoding:")
-    for col in ["gen_health", "ment_health_days", "phys_health_days"]:
+    for col in ["gen_health", "ment_health_days", "phys_health_days", "sex"]:
         n_na = df[col].isna().sum()
         print(f"  {col:18s} {n_na:>9,}  ({100*n_na/n_before:.1f}%)")
     print(f"\nSaved to: {OUT_PATH}")
