@@ -6,6 +6,8 @@ Colab RAM (files have 342 columns, ~400-500k rows each).
 
 Cross-year harmonization: all key variables share the same BRFSS name across
 2011-2019 EXCEPT sex (SEX 2011-2017, SEX1 2018, SEXVAR 2019) -> `sex`.
+(Race is deliberately not included: no single race variable spans all 9 years
+cleanly; it will be added later only if the analysis requires it.)
 
 Input:  data/raw/LLCP<year>.XPT
 Output: data/processed/brfss_panel.parquet
@@ -25,7 +27,9 @@ STABLE_VARS = {
     "MENTHLTH": "ment_health_days",
     "PHYSHLTH": "phys_health_days",
     "_EDUCAG": "education",
-    "_LLCPWT": "weight",      # final BRFSS sampling weight (dual-frame), all years
+    "_LLCPWT": "weight",
+    "_AGEG5YR": "age_group",   # age in 5-year groups (1=18-24 ... 13=80+), 14=missing
+    "IMONTH": "interview_month",  # interview month, for month fixed effects
 }
 
 SEX_VAR_BY_YEAR = {y: "SEX" for y in range(2011, 2018)}
